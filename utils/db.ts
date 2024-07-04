@@ -2,13 +2,12 @@ import mongoose from "mongoose";
 require('dotenv').config();
 
 
-const dbUrl:string = process.env.DB_URI || '';
+const dbUrl:string = process.env.DB_URL || '';
 
 
 const connectDB = async()=>{
     try {
         await mongoose.connect(dbUrl);
-        // console.log('Database connected')
         
         console.log("Database connected")
 
