@@ -12,6 +12,34 @@ interface ITokenOptions extends CookieOptions {
 }
 
 
+
+
+
+
+
+const accessTokenExpire = parseInt(
+  process.env.ACCESS_TOKEN_EXPIRE || "5"
+);
+const refreshTokenExpire = parseInt(
+  process.env.REFRESH_TOKEN_EXPIRE || "5"
+);
+
+export const accessTokenOptions: ITokenOptions = {
+  expires: new Date(Date.now() + accessTokenExpire  * 60 *  1000),
+  maxAge: accessTokenExpire * 60 * 1000,
+  httpOnly: true,
+  sameSite: "lax",
+};
+
+
+export const refreshTokenOptions: ITokenOptions = {
+  expires: new Date(Date.now() + refreshTokenExpire * 24 * 60 *  60 * 1000),
+  maxAge: refreshTokenExpire * 24 * 60 * 60 * 1000,
+  httpOnly: true,
+  sameSite: "lax",
+};
+
+
 export const sendToken = (
   user: IUser,
   statusCode: number,
@@ -22,27 +50,6 @@ export const sendToken = (
 
   redis.set(user._id as RedisKey, JSON.stringify(user) as any);
 
-  const accessTokenExpire = parseInt(
-    process.env.ACCESS_TOKEN_EXPIRE || "300"
-  );
-  const refreshTokenExpire = parseInt(
-    process.env.REFRESH_TOKEN_EXPIRE || "1200"
-  );
-
-  const accessTokenOptions: ITokenOptions = {
-    expires: new Date(Date.now() + accessTokenExpire * 60 *  1000),
-    maxAge: accessTokenExpire * 60 * 1000,
-    httpOnly: true,
-    sameSite: "lax",
-  };
-
-
-  const refreshTokenOptions: ITokenOptions = {
-    expires: new Date(Date.now() + refreshTokenExpire * 60 * 1000),
-    maxAge: refreshTokenExpire * 60 * 1000,
-    httpOnly: true,
-    sameSite: "lax",
-  };
 
   if (process.env.NODE_ENV === "production") {
     accessTokenOptions.secure = true;

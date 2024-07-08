@@ -11,7 +11,7 @@ export const isAuthenticated = CatchAsyncError(
 
     if (!access_token) {
       return next(
-        new ErrorHandler("Please login to access this resource", 401)
+        new ErrorHandler("Your access token is expired. Please login to access this resource", 401)
       );
     }
 
@@ -39,3 +39,14 @@ export const isAuthenticated = CatchAsyncError(
     }
   }
 );
+
+
+// validate user role
+export const authorizeRoles = (...roles: string[]) => {
+    return (req: any, res: Response, next: NextFunction) => {
+      if (!roles.includes(req.user?.role || "")) {
+        return next(new ErrorHandler(`Role: ${req.user?.role} is not allowed to access this resource`, 403));
+      }
+      next();
+    };
+  };

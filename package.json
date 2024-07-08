@@ -4,7 +4,7 @@
   "description": "Psalms For kids Server side",
   "main": "server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "md alamin",
@@ -16,6 +16,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.9",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.2.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
