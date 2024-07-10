@@ -12,6 +12,8 @@
       }
       .container {
         padding: 20px;
+        width: 60%;
+        margin: 0 auto;
       }
       h2 {
         margin-bottom: 10px;
@@ -26,8 +28,14 @@
         padding: 10px;
         border: 1px solid #ddd;
       }
-      p{
+      p {
         margin-top: 10px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          width: 100%;
+        }
       }
     </style>
   </head>
@@ -60,7 +68,7 @@
             <td></td>
             <td></td>
             <td></td>
-            <td>Subtotal = </td>
+            <td>Subtotal =</td>
             <td>$<%= order.price %></td>
           </tr>
         </tbody>

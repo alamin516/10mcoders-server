@@ -1,15 +1,15 @@
-import { NextFunction, Response, Request } from "express";
-import { CatchAsyncError } from "../middleware/catchAsyncErrors";
-import ErrorHandler from "../utils/ErrorHandler";
 import ejs from "ejs";
-import { IOrder } from "../models/order.model";
-import userModel, { IUser } from "../models/user.model";
-import CourseModel, { ICourse } from "../models/course.model";
-import { newOrder } from "../services/order.service";
+import { NextFunction, Request, Response } from "express";
 import path from "path";
-import { sendMail } from "../utils/sendMail";
+import { CatchAsyncError } from "../middleware/catchAsyncErrors";
+import CourseModel, { ICourse } from "../models/course.model";
 import NotificationModel from "../models/notification.model";
+import { IOrder } from "../models/order.model";
+import UserModel from "../models/user.model";
+import { getAllOrdersService, newOrder } from "../services/order.service";
+import ErrorHandler from "../utils/ErrorHandler";
 import { redis } from "../utils/redis";
+import { sendMail } from "../utils/sendMail";
 
 // create order
 export const createOrder = CatchAsyncError(
@@ -17,7 +17,7 @@ export const createOrder = CatchAsyncError(
     try {
       const { courseId, payment_info } = req.body as IOrder;
 
-      const user = await userModel.findById(req.user?._id);
+      const user = await UserModel.findById(req.user?._id);
 
       const courseExistInUser = user?.courses.some(
         (course: any) => course._id.toString() === courseId
@@ -29,7 +29,7 @@ export const createOrder = CatchAsyncError(
         );
       }
 
-      const course = await CourseModel.findById(courseId) as ICourse;
+      const course = (await CourseModel.findById(courseId)) as ICourse;
 
       if (!course) {
         return next(new ErrorHandler("Course not found", 400));
@@ -38,7 +38,7 @@ export const createOrder = CatchAsyncError(
       const data: any = {
         courseId: course._id,
         userId: user?._id,
-        payment_info
+        payment_info,
       };
 
       const orderMailData = {
@@ -73,7 +73,7 @@ export const createOrder = CatchAsyncError(
         return next(new ErrorHandler(error.message, 400));
       }
 
-      user?.courses.push(data?.courseId)
+      user?.courses.push(data?.courseId);
 
       await user?.save();
 
@@ -83,39 +83,46 @@ export const createOrder = CatchAsyncError(
         message: `You have a new order from ${course?.name}`,
       });
 
-     
-    course.sold = (course.sold as number) + 1;
-      
+      course.sold = (course.sold as number) + 1;
 
       await course.save();
 
       const isExistRedis = await redis.get(courseId);
-      if(isExistRedis){
-        redis.del(courseId)
+      if (isExistRedis) {
+        redis.del(courseId);
 
         await redis.set(courseId, JSON.stringify(course));
       }
 
       const isExistUserRedis = await redis.get(user?._id as string);
-      if(isExistUserRedis){
-        redis.del(user?._id as string)
+      if (isExistUserRedis) {
+        redis.del(user?._id as string);
 
         await redis.set(user?._id as string, JSON.stringify(user));
       }
 
       const isAllCoursesCache = await redis.get("allCourses");
 
-      if(isAllCoursesCache){
+      if (isAllCoursesCache) {
         const courses = await CourseModel.find().select(
-            "-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions"
-          );
-  
-          await redis.set("allCourses", JSON.stringify(courses));
+          "-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions"
+        );
+
+        await redis.set("allCourses", JSON.stringify(courses));
       }
-      
 
       newOrder(data, res, next);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
 
+// Get all orders - only admin
+export const getAllOrders = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      getAllOrdersService(res);
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }

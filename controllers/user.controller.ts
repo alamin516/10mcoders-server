@@ -6,8 +6,12 @@ import jwt, { JwtPayload, Secret } from "jsonwebtoken";
 import cloudinary from "cloudinary";
 import path from "path";
 import { CatchAsyncError } from "../middleware/catchAsyncErrors";
-import userModel, { IUser } from "../models/user.model";
-import { getUserById } from "../services/user.service";
+import UserModel, { IUser } from "../models/user.model";
+import {
+  getAllUsersService,
+  getUserById,
+  updateUserRoleService,
+} from "../services/user.service";
 import ErrorHandler from "../utils/ErrorHandler";
 import {
   accessTokenOptions,
@@ -30,7 +34,7 @@ export const registrationUser = CatchAsyncError(
     try {
       const { name, email, password } = req.body;
 
-      const isEmailExist = await userModel.findOne({ email });
+      const isEmailExist = await UserModel.findOne({ email });
 
       if (isEmailExist) {
         return next(new ErrorHandler("Email already exist", 400));
@@ -116,13 +120,13 @@ export const activateUser = CatchAsyncError(
 
       const { name, email, password } = newUser.user;
 
-      const existUser = await userModel.findOne({ email });
+      const existUser = await UserModel.findOne({ email });
 
       if (existUser) {
         return next(new ErrorHandler("Email already exist", 400));
       }
 
-      const user = await userModel.create({
+      const user = await UserModel.create({
         name,
         email,
         password,
@@ -159,7 +163,7 @@ export const loginUser = CatchAsyncError(
         return next(new ErrorHandler("Please enter email and password", 400));
       }
 
-      const user = await userModel.findOne({ email }).select("+password");
+      const user = await UserModel.findOne({ email }).select("+password");
 
       if (!user) {
         return next(new ErrorHandler("Invalid email or password", 400));
@@ -276,10 +280,10 @@ export const socialAuth = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, name, avatar } = req.body;
-      const user = await userModel.findOne({ email });
+      const user = await UserModel.findOne({ email });
 
       if (!user) {
-        const newUser = await userModel.create({ email, name, avatar });
+        const newUser = await UserModel.create({ email, name, avatar });
         sendToken(newUser, 200, res);
       } else {
         sendToken(user, 200, res);
@@ -302,10 +306,10 @@ export const updateUserInfo = CatchAsyncError(
     try {
       const { email, name } = req.body as IUpdateUserInfo;
       const userId = req.user?._id;
-      const user = await userModel.findById(userId);
+      const user = await UserModel.findById(userId);
 
       if (email && user) {
-        const isEmailExist = await userModel.findOne({ email });
+        const isEmailExist = await UserModel.findOne({ email });
 
         if (isEmailExist) {
           return next(
@@ -350,7 +354,7 @@ export const updateUserPassword = CatchAsyncError(
         return next(new ErrorHandler("Please inter old and new password", 400));
       }
 
-      const user = await userModel.findById(req.user?._id).select("+password");
+      const user = await UserModel.findById(req.user?._id).select("+password");
 
       if (user?.password === undefined) {
         return next(new ErrorHandler("Invalid user", 400));
@@ -390,7 +394,7 @@ export const updateUserPicture = CatchAsyncError(
 
       const userId = req.user?._id;
 
-      const user = await userModel.findById(userId);
+      const user = await UserModel.findById(userId);
 
       if (avatar && user) {
         if (user?.avatar.public_id) {
@@ -423,6 +427,56 @@ export const updateUserPicture = CatchAsyncError(
       res.status(201).json({
         success: true,
         user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// Get all users - only admin
+export const getAllUsers = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      getAllUsersService(res);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// update user role -> only for admin
+export const UpdateUserRole = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.body;
+
+      updateUserRoleService(res, id, role);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// Delete user ==> only admin
+export const deleteUser = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      const user = await UserModel.findById(id);
+
+      if (!user) {
+        return next(new ErrorHandler("User not found", 404));
+      }
+
+      await user.deleteOne({ id });
+
+      await redis.del(id);
+
+      res.status(201).json({
+        success: true,
+        message: "User deleted successfully",
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
