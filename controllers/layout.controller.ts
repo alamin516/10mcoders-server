@@ -1,12 +1,12 @@
 import cloudinary from "cloudinary";
-import { NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import { CatchAsyncError } from "../middleware/catchAsyncErrors";
-import ErrorHandler from "../utils/ErrorHandler";
 import LayoutModel from "../models/layout.model";
+import ErrorHandler from "../utils/ErrorHandler";
 
 // Create layout
 export const createLayout = CatchAsyncError(
-  async (req: any, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { type } = req.body;
       const isExistType = await LayoutModel.findOne({ type });
@@ -73,7 +73,7 @@ export const createLayout = CatchAsyncError(
 
 // Update layout
 export const updateLayout = CatchAsyncError(
-  async (req: any, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { type } = req.body;
       if (type === "Banner") {
