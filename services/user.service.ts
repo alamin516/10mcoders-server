@@ -9,6 +9,8 @@ export const getUserById = async (id: string, res: Response) => {
   if (userJson) {
     const user = JSON.parse(userJson);
 
+    delete user.password;
+
     res.status(201).json({
       success: true,
       user,

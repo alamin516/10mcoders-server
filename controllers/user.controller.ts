@@ -220,7 +220,7 @@ export const updateAccessToken = CatchAsyncError(
       const session = await redis.get(decoded.id as string);
 
       if (!session) {
-        return next(new ErrorHandler(message, 400));
+        return next(new ErrorHandler("Please login again", 400));
       }
 
       const user = JSON.parse(session);
@@ -245,6 +245,8 @@ export const updateAccessToken = CatchAsyncError(
 
       res.cookie("access_token", accessToken, accessTokenOptions);
       res.cookie("refresh_token", refreshToken, refreshTokenOptions);
+
+      await redis.set(user._id, JSON.stringify(user), "EX", 604800);
 
       res.status(200).json({
         success: true,
@@ -279,7 +281,7 @@ interface ISocialAuth {
 export const socialAuth = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, name, avatar } = req.body;
+      const { email, name, avatar } = req.body as ISocialAuth;
       const user = await UserModel.findOne({ email });
 
       if (!user) {
@@ -295,7 +297,6 @@ export const socialAuth = CatchAsyncError(
 );
 
 // update user info
-
 interface IUpdateUserInfo {
   name?: string;
   email?: string;
