@@ -281,12 +281,25 @@ interface ISocialAuth {
 export const socialAuth = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, name, avatar } = req.body as ISocialAuth;
+      const { email, name, avatar: image } = req.body as ISocialAuth;
       const user = await UserModel.findOne({ email });
 
       if (!user) {
-        const newUser = await UserModel.create({ email, name, avatar });
-        sendToken(newUser, 200, res);
+        if (image) {
+          const myCloud = await cloudinary.v2.uploader.upload(image, {
+            folder: "avatars",
+          });
+          const avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+
+          const newUser = await UserModel.create({ email, name, avatar });
+          console.log(newUser);
+          sendToken(newUser, 200, res);
+        } else {
+          throw new Error("Avatar image is required");
+        }
       } else {
         sendToken(user, 200, res);
       }
@@ -306,22 +319,9 @@ export const updateUserInfo = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, name } = req.body as IUpdateUserInfo;
+
       const userId = req.user?._id;
       const user = await UserModel.findById(userId);
-
-      if (email && user) {
-        const isEmailExist = await UserModel.findOne({ email });
-
-        if (isEmailExist) {
-          return next(
-            new ErrorHandler(
-              "Someone already used this email. Please try another email",
-              400
-            )
-          );
-        }
-        user.email = email;
-      }
 
       if (name && user) {
         user.name = name;
@@ -391,7 +391,7 @@ interface IUpdateUserPicture {
 export const updateUserPicture = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { avatar } = req.body;
+      const { avatar } = req.body as IUpdateUserPicture;
 
       const userId = req.user?._id;
 

@@ -15,8 +15,6 @@ export interface IUser extends Document {
   };
   role: string;
   isVerified: boolean;
-  products: Array<{ productId: string }>;
-  carts: Array<{ productId: string }>;
   courses: Array<{ courseId: string }>;
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
@@ -57,16 +55,6 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    products: [
-      {
-        productId: String,
-      },
-    ],
-    carts: [
-      {
-        productId: String,
-      },
-    ],
     courses: [
       {
         courseId: String,
