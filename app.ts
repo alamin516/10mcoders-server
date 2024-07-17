@@ -10,12 +10,15 @@ import orderRouter from "./routes/order.route";
 import notificationRouter from "./routes/notification.route";
 import analyticsRouter from "./routes/analytics.route";
 import layoutRouter from "./routes/layout.route";
+const morgan = require("morgan");
+
 
 // body parser
 app.use(express.json({ limit: "64mb" }));
 
 // cookie parser
 app.use(cookieParser());
+app.use(morgan("dev"));
 
 // cors ==> cross origin sharing
 app.use(
