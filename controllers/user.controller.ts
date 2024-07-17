@@ -27,12 +27,13 @@ interface IRegistrationBody {
   email: string;
   password: string;
   avatar?: string;
+  mobile: string
 }
 
 export const registrationUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, mobile } = req.body;
 
       const isEmailExist = await UserModel.findOne({ email });
 
@@ -40,10 +41,15 @@ export const registrationUser = CatchAsyncError(
         return next(new ErrorHandler("Email already exist", 400));
       }
 
+      if(!mobile){
+        return next(new ErrorHandler("Mobile Number is required.", 400));
+      }
+
       const user: IRegistrationBody = {
         name,
         email,
         password,
+        mobile
       };
 
       const activationToken = createActivationToken(user);
@@ -118,7 +124,7 @@ export const activateUser = CatchAsyncError(
         return next(new ErrorHandler("Invalid activation code", 400));
       }
 
-      const { name, email, password } = newUser.user;
+      const { name, email, password, mobile } = newUser.user;
 
       const existUser = await UserModel.findOne({ email });
 
@@ -130,7 +136,10 @@ export const activateUser = CatchAsyncError(
         name,
         email,
         password,
+        mobile
       });
+
+      console.log(user)
 
       res.status(201).json({
         success: true,
@@ -313,15 +322,20 @@ export const socialAuth = CatchAsyncError(
 interface IUpdateUserInfo {
   name?: string;
   email?: string;
+  mobile?: string;
 }
 
 export const updateUserInfo = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, name } = req.body as IUpdateUserInfo;
+      const { name, mobile } = req.body as IUpdateUserInfo;
 
       const userId = req.user?._id;
       const user = await UserModel.findById(userId);
+
+      if(mobile && user){
+        user.mobile = mobile
+      }
 
       if (name && user) {
         user.name = name;

@@ -4,10 +4,12 @@ import jwt from "jsonwebtoken";
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 const emailRegexPattern: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const mobileRegexPattern: RegExp = /^01[0-9]{9}$/
 
 export interface IUser extends Document {
   name: string;
   email: string;
+  mobile: string;
   password: string;
   avatar: {
     public_id: string;
@@ -36,6 +38,15 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         },
         message: "Please enter a valid email",
       },
+    },
+    mobile:{
+        type: String,
+        validate: {
+          validator: function(value:any) {
+            return mobileRegexPattern.test(value);
+          },
+          message: 'Invalid mobile number for Bangladesh'
+        }
     },
     password: {
       type: String,
