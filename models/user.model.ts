@@ -91,14 +91,14 @@ userSchema.pre<IUser>("save", async function (next) {
 // sign access token
 userSchema.methods.SignAccessToken = function () {
   return jwt.sign({ id: this._id }, process.env.ACCESS_TOKEN || "", {
-    expiresIn: "5m",
+    expiresIn: "1h",
   });
 };
 
 // sign refresh token
 userSchema.methods.SignRefreshToken = function () {
   return jwt.sign({ id: this._id }, process.env.REFRESH_TOKEN || "", {
-    expiresIn: "5d",
+    expiresIn: "7d",
   });
 };
 

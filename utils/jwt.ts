@@ -18,15 +18,15 @@ interface ITokenOptions extends CookieOptions {
 
 
 const accessTokenExpire = parseInt(
-  process.env.ACCESS_TOKEN_EXPIRE || "5"
+  process.env.ACCESS_TOKEN_EXPIRE || "1"
 );
 const refreshTokenExpire = parseInt(
-  process.env.REFRESH_TOKEN_EXPIRE || "5"
+  process.env.REFRESH_TOKEN_EXPIRE || "7"
 );
 
 export const accessTokenOptions: ITokenOptions = {
-  expires: new Date(Date.now() + accessTokenExpire  * 60 *  1000),
-  maxAge: accessTokenExpire * 60 * 1000,
+  expires: new Date(Date.now() + accessTokenExpire * 60 * 60 *  1000),
+  maxAge: accessTokenExpire * 60 * 60 * 1000,
   httpOnly: true,
   sameSite: "lax",
 };

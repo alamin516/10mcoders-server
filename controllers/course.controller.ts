@@ -17,6 +17,8 @@ export const uploadCourse = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body;
+      console.log(data)
+
       const thumbnail = data.thumbnail;
       if (thumbnail) {
         const myCluod = await cloudinary.v2.uploader.upload(thumbnail, {
@@ -41,9 +43,12 @@ export const editCourse = CatchAsyncError(
     try {
       const data = req.body;
       const thumbnail = data.thumbnail;
+      const courseId = req.params.id;
 
-      if (thumbnail) {
-        await cloudinary.v2.uploader.destroy(thumbnail?.public_id);
+      const coursedata = await CourseModel.findById(courseId) as any;
+
+      if (thumbnail && !thumbnail.startsWith("https")) {
+        await cloudinary.v2.uploader.destroy(coursedata.thumbnail?.public_id);
 
         const myCluod = await cloudinary.v2.uploader.upload(thumbnail, {
           folder: "courses",
@@ -54,7 +59,14 @@ export const editCourse = CatchAsyncError(
         };
       }
 
-      const courseId = req.params.id;
+
+      if(thumbnail.startsWith("https")){
+        data.thumbnail = {
+          public_id: coursedata.thumbnail?.public_id,
+          url: coursedata.thumbnail?.url,
+        }
+      }
+
 
       const course = await CourseModel.findByIdAndUpdate(
         courseId,
@@ -477,21 +489,23 @@ export const deleteCourse = CatchAsyncError(
 
 
 // generate video url
-export const generateVideoUrl = CatchAsyncError(async(req: Request, res: Response, next: NextFunction)=>{
+export const generateVideoUrl = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const {videoId} = req.body;
+    const { videoId } = req.body;
+    console.log(videoId)
     const response = await axios.post(`https://dev.vdocipher.com/api/videos/${videoId}/otp`,
-      {ttl: 300},
+      { ttl: 300 },
       {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
-          Authorization: `Apisecret ${process.env.VDOCIPHER_API_SECRET}`
+          Authorization: `Apisecret ${process.env.VIDEO_CIPHER_API_SECRET}`
         }
       }
     );
-    res.json(response.data)
+    res.json(response.data);
   } catch (error: any) {
-    return next(new ErrorHandler(error.message, 400));
+    console.error("Error generating video URL:", error.response?.data || error.message);
+    return next(new ErrorHandler(error.response?.data.message || error.message, 400));
   }
-})
+});

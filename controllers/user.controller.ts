@@ -238,7 +238,7 @@ export const updateAccessToken = CatchAsyncError(
         { id: user._id },
         process.env.ACCESS_TOKEN as string,
         {
-          expiresIn: "5m",
+          expiresIn: "1h",
         }
       );
 
@@ -246,7 +246,7 @@ export const updateAccessToken = CatchAsyncError(
         { id: user._id },
         process.env.REFRESH_TOKEN as string,
         {
-          expiresIn: "5d",
+          expiresIn: "7d",
         }
       );
 
@@ -257,10 +257,7 @@ export const updateAccessToken = CatchAsyncError(
 
       await redis.set(user._id, JSON.stringify(user), "EX", 604800);
 
-      res.status(200).json({
-        success: true,
-        accessToken,
-      });
+      next();
     } catch (error: any) {
       next(new ErrorHandler(error.message, 400));
     }
@@ -464,9 +461,10 @@ export const getAllUsers = CatchAsyncError(
 export const UpdateUserRole = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id, role } = req.body;
+      const { email, role } = req.body;
 
-      updateUserRoleService(res, id, role);
+      updateUserRoleService(res, email, role);
+      
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }

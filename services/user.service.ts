@@ -20,17 +20,21 @@ export const getUserById = async (id: string, res: Response) => {
 
 // Get all User service
 export const getAllUsersService = async (res: Response) => {
-  const users = await UserModel.find({ role: { $ne: "admin" } })
+  const users = await UserModel.find({ role: { $nin: ["admin", "moderator"] } })
     .sort({
       createdAt: -1,
     })
-    .select("-role.admin");
+    .select("-role.user");
 
   const admin = await UserModel.find({ role: { $ne: "user" } })
     .sort({
       createdAt: -1,
     })
-    .select("-role.admin");
+    .select("-role.admin -role.moderator");
+
+  const allUsers = await UserModel.find().sort({
+    createdAt: -1,
+  });
 
   const total = users.length + admin.length;
 
@@ -40,19 +44,43 @@ export const getAllUsersService = async (res: Response) => {
       total,
       users,
       admin,
+      allUsers
     },
   });
 };
 
 export const updateUserRoleService = async (
   res: Response,
-  id: string,
+  email: string,
   role: string
 ) => {
-  const user = await UserModel.findByIdAndUpdate(id, { role }, { new: true });
+  try {
+    const isUserExist = await UserModel.findOne({ email });
 
-  res.status(201).json({
-    success: true,
-    user,
-  });
+    console.log(isUserExist)
+
+    if (!isUserExist) {
+      res.status(400).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if(isUserExist){
+      const id = isUserExist._id;
+      const user = await UserModel.findByIdAndUpdate(id, { role }, { new: true });
+
+      res.status(200).json({
+        success: true,
+        message: "User role updated successfully",
+        user,
+      });
+    }
+    
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };

@@ -13,7 +13,7 @@ export const createCourse = CatchAsyncError(
   }
 );
 
-// Get All users service
+// Get All Courses service
 export const getAllCoursesService = async (res: Response) => {
   const courses = await CourseModel.find().sort({
     createdAt: -1,

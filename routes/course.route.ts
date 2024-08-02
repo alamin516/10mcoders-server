@@ -1,12 +1,13 @@
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { addAnswer, addQuestion, addReplyToReview, addReview, deleteCourse, editCourse, generateVideoUrl, getAllCourse, getAllCourses, getCourseByUser, getSingleCourse, uploadCourse } from "../controllers/course.controller";
+import { updateAccessToken } from "../controllers/user.controller";
 const courseRouter = express.Router();
 
 
-courseRouter.post("/course/create-course", isAuthenticated, authorizeRoles("admin"), uploadCourse);
+courseRouter.post("/create-course", updateAccessToken, isAuthenticated, authorizeRoles("admin"), uploadCourse);
 
-courseRouter.put("/course/edit-course/:id", isAuthenticated, authorizeRoles("admin"), editCourse);
+courseRouter.put("/edit-course/:id", isAuthenticated, authorizeRoles("admin"), editCourse);
 
 courseRouter.get("/course/:id", getSingleCourse);
 
