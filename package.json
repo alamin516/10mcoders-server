@@ -2,11 +2,12 @@
   "name": "psalmsforkids-server",
   "version": "1.0.0",
   "description": "Psalms For kids Server side",
-  "main": "server.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "start": "node dist/server.js"
   },
   "author": "md alamin",
   "license": "ISC",
