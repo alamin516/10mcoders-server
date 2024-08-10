@@ -57,7 +57,6 @@ export const updateUserRoleService = async (
   try {
     const isUserExist = await UserModel.findOne({ email });
 
-    console.log(isUserExist)
 
     if (!isUserExist) {
       res.status(400).json({

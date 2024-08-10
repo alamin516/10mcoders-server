@@ -20,9 +20,13 @@ interface ILayout extends Document{
     faq: IFaqItem[],
     categories: ICategory[],
     banner: {
-        image: IBannerImage,
+        banner_image: IBannerImage,
         title: string,
-        subTitle: string
+        subTitle: string,
+        subTitle2: string,
+        url: string,
+        url_text: string,
+        images: []
     }
 }
 
@@ -48,9 +52,13 @@ const layoutSchema = new Schema<ILayout>({
     faq: [faqSchema],
     categories: [categorySchema],
     banner: {
-        image: bannerImageSchema,
+        banner_image: bannerImageSchema,
         title: {type: String},
-        subTitle: {type: String}
+        subTitle: {type: String},
+        subTitle2: {type: String},
+        url: {type: String},
+        url_text: {type: String},
+        images: [{public_id: String, url: String}]
     }
 })
 
