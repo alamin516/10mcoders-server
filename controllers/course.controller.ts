@@ -52,7 +52,6 @@ export const editCourse = CatchAsyncError(
           await cloudinary.v2.uploader.destroy(courseData.thumbnail?.public_id);
         }
         
-        console.log("ggg");
         const myCluod = await cloudinary.v2.uploader.upload(thumbnail, {
           folder: "courses",
         });
