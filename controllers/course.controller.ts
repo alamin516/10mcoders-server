@@ -78,10 +78,31 @@ export const editCourse = CatchAsyncError(
         }
       );
 
+      const isExistRedis = await redis.get(courseId);
+      if (isExistRedis) {
+        const course = await CourseModel.findById(req.params.id).select(
+          "-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions"
+        );
+
+        if(!course){
+          return next(new ErrorHandler("Course not found with this id", 404));
+        }
+
+        await redis.set(courseId, JSON.stringify(course),  "EX", 604800); // 7 days
+
+
+        const courses = await CourseModel.find().select(
+          "-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions"
+        );
+
+        await redis.set("allCourses", JSON.stringify(courses));
+
+
       res.status(201).json({
         success: true,
         course,
       });
+    }
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
@@ -163,7 +184,7 @@ export const getCourseByUser = CatchAsyncError(
       const courseId = req.params.id;
 
       const courseExists = userCourseList?.find(
-        (course: any) => course._id.toString() === courseId
+        (course: any) => course.courseId.toString() === courseId
       );
 
       if (!courseExists) {
