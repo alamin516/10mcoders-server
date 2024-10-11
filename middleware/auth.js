@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,7 +8,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const catchAsyncErrors_1 = require("./catchAsyncErrors");
 const ErrorHandler_1 = __importDefault(require("../utils/ErrorHandler"));
 const redis_1 = require("../utils/redis");
-exports.isAuthenticated = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.isAuthenticated = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     const access_token = req.cookies.access_token;
     if (!access_token) {
         return next(new ErrorHandler_1.default("Your access token is expired. Please login to access this resource", 401));
@@ -27,7 +18,7 @@ exports.isAuthenticated = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, nex
         if (!decoded) {
             return next(new ErrorHandler_1.default("Access token is not valid", 401));
         }
-        const user = yield redis_1.redis.get(decoded.id);
+        const user = await redis_1.redis.get(decoded.id);
         if (!user) {
             return next(new ErrorHandler_1.default("Please login to access this resource", 404));
         }
@@ -37,12 +28,11 @@ exports.isAuthenticated = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, nex
     catch (err) {
         return next(new ErrorHandler_1.default("Invalid access token", 401));
     }
-}));
+});
 // validate user role
 const authorizeRoles = (...roles) => {
     return (req, res, next) => {
-        var _a;
-        if (!roles.includes(((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) || "")) {
+        if (!roles.includes(req.user?.role || "")) {
             return next(new ErrorHandler_1.default(`You don't have permission to access this resource.`, 403));
         }
         next();

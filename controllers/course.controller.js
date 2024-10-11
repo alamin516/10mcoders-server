@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -26,13 +17,13 @@ const sendMail_1 = require("../utils/sendMail");
 const notification_model_1 = __importDefault(require("../models/notification.model"));
 const axios_1 = __importDefault(require("axios"));
 // upload course
-exports.uploadCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.uploadCourse = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const data = req.body;
         console.log(data);
         const thumbnail = data.thumbnail;
         if (thumbnail) {
-            const myCluod = yield cloudinary_1.default.v2.uploader.upload(thumbnail, {
+            const myCluod = await cloudinary_1.default.v2.uploader.upload(thumbnail, {
                 folder: "courses",
             });
             data.thumbnail = {
@@ -45,21 +36,19 @@ exports.uploadCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) 
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // edit course export
-exports.editCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+exports.editCourse = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const data = req.body;
         const thumbnail = data.thumbnail;
         const courseId = req.params.id;
-        const courseData = (yield course_model_1.default.findById(courseId));
+        const courseData = (await course_model_1.default.findById(courseId));
         if (thumbnail && !thumbnail.startsWith("https")) {
-            if ((_a = courseData.thumbnail) === null || _a === void 0 ? void 0 : _a.public_id) {
-                yield cloudinary_1.default.v2.uploader.destroy((_b = courseData.thumbnail) === null || _b === void 0 ? void 0 : _b.public_id);
+            if (courseData.thumbnail?.public_id) {
+                await cloudinary_1.default.v2.uploader.destroy(courseData.thumbnail?.public_id);
             }
-            console.log("ggg");
-            const myCluod = yield cloudinary_1.default.v2.uploader.upload(thumbnail, {
+            const myCluod = await cloudinary_1.default.v2.uploader.upload(thumbnail, {
                 folder: "courses",
             });
             data.thumbnail = {
@@ -69,29 +58,39 @@ exports.editCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) =>
         }
         if (thumbnail.startsWith("https")) {
             data.thumbnail = {
-                public_id: (_c = courseData.thumbnail) === null || _c === void 0 ? void 0 : _c.public_id,
-                url: (_d = courseData.thumbnail) === null || _d === void 0 ? void 0 : _d.url,
+                public_id: courseData.thumbnail?.public_id,
+                url: courseData.thumbnail?.url,
             };
         }
-        const course = yield course_model_1.default.findByIdAndUpdate(courseId, {
+        const course = await course_model_1.default.findByIdAndUpdate(courseId, {
             $set: data,
         }, {
             new: true,
         });
-        res.status(201).json({
-            success: true,
-            course,
-        });
+        const isExistRedis = await redis_1.redis.get(courseId);
+        if (isExistRedis) {
+            const course = await course_model_1.default.findById(req.params.id).select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
+            if (!course) {
+                return next(new ErrorHandler_1.default("Course not found with this id", 404));
+            }
+            await redis_1.redis.set(courseId, JSON.stringify(course), "EX", 604800); // 7 days
+            const courses = await course_model_1.default.find().select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
+            await redis_1.redis.set("allCourses", JSON.stringify(courses));
+            res.status(201).json({
+                success: true,
+                course,
+            });
+        }
     }
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // get single course -- without purchasing
-exports.getSingleCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getSingleCourse = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const courseId = req.params.id;
-        const isExistRedis = yield redis_1.redis.get(courseId);
+        const isExistRedis = await redis_1.redis.get(courseId);
         if (isExistRedis) {
             const course = JSON.parse(isExistRedis);
             res.status(200).json({
@@ -100,11 +99,11 @@ exports.getSingleCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, nex
             });
         }
         else {
-            const course = yield course_model_1.default.findById(req.params.id).select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
+            const course = await course_model_1.default.findById(req.params.id).select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
             if (!course) {
                 return next(new ErrorHandler_1.default("Course not found with this id", 404));
             }
-            yield redis_1.redis.set(courseId, JSON.stringify(course), "EX", 604800); // 7 days
+            await redis_1.redis.set(courseId, JSON.stringify(course), "EX", 604800); // 7 days
             res.status(200).json({
                 success: true,
                 course,
@@ -114,11 +113,11 @@ exports.getSingleCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, nex
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // get all courses -- without purchasing
-exports.getAllCourses = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getAllCourses = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
-        const isAllCoursesCache = yield redis_1.redis.get("allCourses");
+        const isAllCoursesCache = await redis_1.redis.get("allCourses");
         if (isAllCoursesCache) {
             const courses = JSON.parse(isAllCoursesCache);
             res.status(200).json({
@@ -127,8 +126,8 @@ exports.getAllCourses = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next)
             });
         }
         else {
-            const courses = yield course_model_1.default.find().select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
-            yield redis_1.redis.set("allCourses", JSON.stringify(courses));
+            const courses = await course_model_1.default.find().select("-courseData.videoUrl -courseData.links -courseData.suggestion -courseData.questions");
+            await redis_1.redis.set("allCourses", JSON.stringify(courses));
             res.status(200).json({
                 success: true,
                 courses,
@@ -138,19 +137,18 @@ exports.getAllCourses = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next)
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // get course content -- only for enrolled user
-exports.getCourseByUser = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
+exports.getCourseByUser = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
-        const userCourseList = (_e = req.user) === null || _e === void 0 ? void 0 : _e.courses;
+        const userCourseList = req.user?.courses;
         const courseId = req.params.id;
-        const courseExists = userCourseList === null || userCourseList === void 0 ? void 0 : userCourseList.find((course) => course._id.toString() === courseId);
+        const courseExists = userCourseList?.find((course) => course.courseId.toString() === courseId);
         if (!courseExists) {
             return next(new ErrorHandler_1.default("You are not eligible to access this course", 404));
         }
-        const course = yield course_model_1.default.findById(courseId);
-        const content = course === null || course === void 0 ? void 0 : course.courseData;
+        const course = await course_model_1.default.findById(courseId);
+        const content = course?.courseData;
         res.status(200).json({
             success: true,
             content,
@@ -159,16 +157,15 @@ exports.getCourseByUser = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, nex
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
-exports.addQuestion = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f, _g;
+});
+exports.addQuestion = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { question, contentId, courseId } = req.body;
-        const course = yield course_model_1.default.findById(courseId);
+        const course = await course_model_1.default.findById(courseId);
         if (!mongoose_1.default.Types.ObjectId.isValid(contentId)) {
             return next(new ErrorHandler_1.default("Invalid content id", 400));
         }
-        const courseContent = (_f = course === null || course === void 0 ? void 0 : course.courseData) === null || _f === void 0 ? void 0 : _f.find((item) => item._id.equals(contentId));
+        const courseContent = course?.courseData?.find((item) => item._id.equals(contentId));
         if (!courseContent) {
             return next(new ErrorHandler_1.default("Invalid content id", 400));
         }
@@ -181,12 +178,12 @@ exports.addQuestion = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) =
         // add this question to our course content
         courseContent.questions.push(newQuestion);
         // notification
-        yield notification_model_1.default.create({
-            user: (_g = req.user) === null || _g === void 0 ? void 0 : _g._id,
+        await notification_model_1.default.create({
+            user: req.user?._id,
             title: "New Question Received",
             message: `You have received a new question from ${courseContent.title}`,
         });
-        yield (course === null || course === void 0 ? void 0 : course.save());
+        await course?.save();
         res.status(200).json({
             success: true,
             course,
@@ -195,20 +192,19 @@ exports.addQuestion = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) =
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
-exports.addAnswer = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _h, _j, _k, _l, _m;
+});
+exports.addAnswer = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { answer, courseId, contentId, questionId } = req.body;
-        const course = yield course_model_1.default.findById(courseId);
+        const course = await course_model_1.default.findById(courseId);
         if (!mongoose_1.default.Types.ObjectId.isValid(contentId)) {
             return next(new ErrorHandler_1.default("Invalid content id", 400));
         }
-        const courseContent = (_h = course === null || course === void 0 ? void 0 : course.courseData) === null || _h === void 0 ? void 0 : _h.find((item) => item._id.equals(contentId));
+        const courseContent = course?.courseData?.find((item) => item._id.equals(contentId));
         if (!courseContent) {
             return next(new ErrorHandler_1.default("Invalid content id", 400));
         }
-        const question = (_j = courseContent === null || courseContent === void 0 ? void 0 : courseContent.questions) === null || _j === void 0 ? void 0 : _j.find((item) => item._id.equals(questionId));
+        const question = courseContent?.questions?.find((item) => item._id.equals(questionId));
         if (!question) {
             return next(new ErrorHandler_1.default("Invalid question id", 400));
         }
@@ -218,11 +214,11 @@ exports.addAnswer = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => 
             answer,
         };
         // add this answer the question to our course content
-        (_k = question === null || question === void 0 ? void 0 : question.questionReplies) === null || _k === void 0 ? void 0 : _k.push(newAnswer);
-        yield (course === null || course === void 0 ? void 0 : course.save());
-        if (((_l = req.user) === null || _l === void 0 ? void 0 : _l._id) === question.user._id) {
-            yield notification_model_1.default.create({
-                user: (_m = req.user) === null || _m === void 0 ? void 0 : _m._id,
+        question?.questionReplies?.push(newAnswer);
+        await course?.save();
+        if (req.user?._id === question.user._id) {
+            await notification_model_1.default.create({
+                user: req.user?._id,
                 title: "Your Question Has Been Replied",
                 message: `You have received a new reply from ${courseContent.title}`,
             });
@@ -232,9 +228,9 @@ exports.addAnswer = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => 
                 name: question.user.name,
                 title: courseContent.title,
             };
-            const html = yield ejs_1.default.renderFile(path_1.default.join(__dirname, "../mails/question-replies.ejs"), data);
+            const html = await ejs_1.default.renderFile(path_1.default.join(__dirname, "../mails/question-replies.ejs"), data);
             try {
-                yield (0, sendMail_1.sendMail)({
+                await (0, sendMail_1.sendMail)({
                     email: question.user.email,
                     subject: "Question Reply",
                     template: "question-replies.ejs",
@@ -253,17 +249,16 @@ exports.addAnswer = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => 
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
-exports.addReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _o, _p;
+});
+exports.addReview = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
-        const userCourseList = (_o = req.user) === null || _o === void 0 ? void 0 : _o.courses;
+        const userCourseList = req.user?.courses;
         const courseId = req.params.id;
-        const courseExist = userCourseList === null || userCourseList === void 0 ? void 0 : userCourseList.some((course) => course._id.toString() === courseId.toString());
+        const courseExist = userCourseList?.some((course) => course._id.toString() === courseId.toString());
         if (!courseExist) {
             return next(new ErrorHandler_1.default("Your are not eligible to access this course", 400));
         }
-        const course = yield course_model_1.default.findById(courseId);
+        const course = await course_model_1.default.findById(courseId);
         const { review, rating } = req.body;
         const newReviewData = {
             user: req.user,
@@ -271,22 +266,22 @@ exports.addReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => 
             rating,
         };
         // If exist review
-        const existingReview = course === null || course === void 0 ? void 0 : course.reviews.find((review) => { var _a, _b; return ((_a = review.user) === null || _a === void 0 ? void 0 : _a._id) === ((_b = req.user) === null || _b === void 0 ? void 0 : _b._id); });
+        const existingReview = course?.reviews.find((review) => review.user?._id === req.user?._id);
         if (existingReview) {
             return next(new ErrorHandler_1.default("You have already reviewed this course", 400));
         }
-        course === null || course === void 0 ? void 0 : course.reviews.push(newReviewData);
+        course?.reviews.push(newReviewData);
         let avg = 0;
-        course === null || course === void 0 ? void 0 : course.reviews.forEach((rev) => {
+        course?.reviews.forEach((rev) => {
             avg += rev.rating;
         });
         if (course) {
-            course.ratings = avg / (course === null || course === void 0 ? void 0 : course.reviews.length);
+            course.ratings = avg / course?.reviews.length;
         }
-        yield (course === null || course === void 0 ? void 0 : course.save());
+        await course?.save();
         const notification = {
             title: "New Review Received",
-            message: `${(_p = req.user) === null || _p === void 0 ? void 0 : _p.name} has given a review in ${course === null || course === void 0 ? void 0 : course.name}`,
+            message: `${req.user?.name} has given a review in ${course?.name}`,
         };
         // create notification
         res.status(200).json({
@@ -297,11 +292,11 @@ exports.addReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => 
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
-exports.addReplyToReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.addReplyToReview = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { comment, courseId, reviewId } = req.body;
-        const course = yield course_model_1.default.findById(courseId);
+        const course = await course_model_1.default.findById(courseId);
         if (!course) {
             return next(new ErrorHandler_1.default("Course not found", 400));
         }
@@ -317,7 +312,7 @@ exports.addReplyToReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, ne
             review.commentReplies = [];
         }
         review.commentReplies.push(replayData);
-        yield (course === null || course === void 0 ? void 0 : course.save());
+        await course?.save();
         res.status(200).json({
             success: true,
             course,
@@ -326,26 +321,26 @@ exports.addReplyToReview = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, ne
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // Get all courses - only admin
-exports.getAllCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getAllCourse = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         (0, course_service_1.getAllCoursesService)(res);
     }
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // Delete Course ==> only admin
-exports.deleteCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+exports.deleteCourse = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { id } = req.params;
-        const course = yield course_model_1.default.findById(id);
+        const course = await course_model_1.default.findById(id);
         if (!course) {
             return next(new ErrorHandler_1.default("Course not found", 404));
         }
-        yield course.deleteOne({ id });
-        yield redis_1.redis.del(id);
+        await course.deleteOne({ id });
+        await redis_1.redis.del(id);
         res.status(201).json({
             success: true,
             message: "Course deleted successfully",
@@ -354,14 +349,13 @@ exports.deleteCourse = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) 
     catch (error) {
         return next(new ErrorHandler_1.default(error.message, 400));
     }
-}));
+});
 // generate video url
-exports.generateVideoUrl = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _q, _r;
+exports.generateVideoUrl = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { videoId } = req.body;
         console.log(videoId);
-        const response = yield axios_1.default.post(`https://dev.vdocipher.com/api/videos/${videoId}/otp`, { ttl: 300 }, {
+        const response = await axios_1.default.post(`https://dev.vdocipher.com/api/videos/${videoId}/otp`, { ttl: 300 }, {
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
@@ -371,7 +365,7 @@ exports.generateVideoUrl = (0, catchAsyncErrors_1.CatchAsyncError)((req, res, ne
         res.json(response.data);
     }
     catch (error) {
-        console.error("Error generating video URL:", ((_q = error.response) === null || _q === void 0 ? void 0 : _q.data) || error.message);
-        return next(new ErrorHandler_1.default(((_r = error.response) === null || _r === void 0 ? void 0 : _r.data.message) || error.message, 400));
+        console.error("Error generating video URL:", error.response?.data || error.message);
+        return next(new ErrorHandler_1.default(error.response?.data.message || error.message, 400));
     }
-}));
+});

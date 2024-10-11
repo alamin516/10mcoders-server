@@ -40,9 +40,13 @@ const layoutSchema = new mongoose_1.Schema({
     faq: [faqSchema],
     categories: [categorySchema],
     banner: {
-        image: bannerImageSchema,
+        banner_image: bannerImageSchema,
         title: { type: String },
-        subTitle: { type: String }
+        subTitle: { type: String },
+        subTitle2: { type: String },
+        url: { type: String },
+        url_text: { type: String },
+        images: [{ public_id: String, url: String }]
     }
 });
 const LayoutModel = mongoose_1.default.model('Layout', layoutSchema);

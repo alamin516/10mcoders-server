@@ -2,12 +2,18 @@
   "name": "psalmsforkids-server",
   "version": "1.0.0",
   "description": "Psalms For kids Server side",
-  "main": "dist/server.js",
+  "type": "commonjs",
+  "main": "build/server.js",
+  "engines": {
+    "node": "18.x"
+  },
+
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "start": "node build/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false",
+    "build": "tsc"
   },
   "author": "md alamin",
   "license": "ISC",
